@@ -1155,25 +1155,25 @@ body[data-phase="map"] .observe-item.lit .o-label { color: #9c2f2f; }
 .stars-modal.closing { animation: modalOut 0.7s ease both; pointer-events: none; }
 @keyframes modalOut { from { opacity: 1; } to { opacity: 0; } }
 .stars-modal-card {
-  width: min(600px, 94vw);
+  width: min(720px, 92vw);
   margin: auto;
   text-align: center;
-  padding: 28px 28px 26px;
+  padding: 40px 40px 36px;
   border: 1px solid rgba(207, 232, 255, 0.42);
-  border-radius: 18px;
+  border-radius: 20px;
   background: rgba(9, 15, 28, 0.9);
   box-shadow: 0 0 60px rgba(207, 232, 255, 0.18), 0 28px 70px rgba(0, 0, 0, 0.72);
 }
 .stars-question {
   font-family: var(--serif);
-  font-size: clamp(20px, 4vw, 28px);
+  font-size: clamp(24px, 4.5vw, 36px);
   font-weight: 600;
   letter-spacing: 0.06em;
   line-height: 1.4;
 }
 .stars-poss-note {
-  margin-top: 10px;
-  font-size: 13px;
+  margin-top: 12px;
+  font-size: 15px;
   letter-spacing: 0.12em;
   color: var(--ink-soft);
 }
@@ -1181,8 +1181,8 @@ body[data-phase="map"] .observe-item.lit .o-label { color: #9c2f2f; }
 .stars-modal-options {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 16px;
+  gap: 16px;
+  margin-top: 24px;
   text-align: left;
 }
 @media (max-width: 560px) {
@@ -1191,10 +1191,10 @@ body[data-phase="map"] .observe-item.lit .o-label { color: #9c2f2f; }
 .stars-option {
   display: block;
   text-align: left;
-  padding: 10px 14px;
+  padding: 16px 20px;
   border: 1px solid var(--line);
   border-left: 3px solid var(--line);
-  border-radius: 12px;
+  border-radius: 14px;
   background: rgba(8, 14, 26, 0.72);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
@@ -1212,17 +1212,17 @@ body[data-phase="map"] .observe-item.lit .o-label { color: #9c2f2f; }
 .stars-option .option-text b {
   display: block;
   font-family: var(--serif);
-  font-size: 15px;
-  letter-spacing: 0.05em;
-  margin-bottom: 3px;
+  font-size: 18px;
+  letter-spacing: 0.06em;
+  margin-bottom: 5px;
   color: var(--ink);
 }
 .stars-option .option-text small {
   display: block;
-  font-size: 11px;
+  font-size: 13px;
   color: var(--ink-soft);
-  letter-spacing: 0.03em;
-  line-height: 1.35;
+  letter-spacing: 0.04em;
+  line-height: 1.5;
 }
 .stars-option:hover {
   border-color: var(--route-glow);
