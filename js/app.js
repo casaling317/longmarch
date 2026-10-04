@@ -926,7 +926,7 @@
     sixtyDone = false;
     sixtyChosen = {};
     clearSixtyTimeouts();
-    $("#sixty-timer").textContent = "40";
+    $("#sixty-timer").textContent = "30";
     var msg = $("#sixty-msg");
     msg.textContent = "";
     msg.classList.remove("show");
@@ -942,7 +942,7 @@
 
     if (window.AudioAmbient) window.AudioAmbient.start();
 
-    var duration = 40;
+    var duration = 30;
     var startProg = 0.45;
     var endProg = 1.0;
     sixtyStart = performance.now();
@@ -1407,7 +1407,10 @@
     container.innerHTML = "";
     var groups = (CONTENT.stars && CONTENT.stars.techKeywordGroups) || [];
     var GROUP_GAP = 2200;  /* 组间隔（ms） */
-    var GROUP_HOLD = 1600; /* 每组全显停留（ms） */
+    var IN_STAGGER = 450;  /* 组内逐个渐入的间隔（ms） */
+    var IN_DUR = 1800;     /* 单个词渐入时长（ms），与 CSS opacity 过渡一致 */
+    var HOLD = 1400;       /* 整组全显后停留（ms） */
+    var OUT_STAGGER = 450; /* 组内逐个渐出的间隔（ms） */
     groups.forEach(function (g, gi) {
       var els = [];
       g.items.forEach(function (kw) {
@@ -1420,13 +1423,21 @@
         container.appendChild(el);
         els.push(el);
       });
+      var n = els.length;
       var inAt = gi * GROUP_GAP;
-      starsTimeouts.push(setTimeout(function () {
-        els.forEach(function (el) { el.classList.add("show"); });
-      }, inAt));
-      starsTimeouts.push(setTimeout(function () {
-        els.forEach(function (el) { el.classList.remove("show"); });
-      }, inAt + GROUP_HOLD));
+      /* 渐入：组内逐个错开，一个接一个浮现（柔和，不整组同弹） */
+      els.forEach(function (el, ei) {
+        starsTimeouts.push(setTimeout(function () {
+          el.classList.add("show");
+        }, inAt + ei * IN_STAGGER));
+      });
+      /* 渐出：整组全显 + 停留后，逐个错开退场 */
+      var outStart = inAt + (n - 1) * IN_STAGGER + IN_DUR + HOLD;
+      els.forEach(function (el, ei) {
+        starsTimeouts.push(setTimeout(function () {
+          el.classList.remove("show");
+        }, outStart + ei * OUT_STAGGER));
+      });
     });
   }
 
@@ -1453,8 +1464,8 @@
       completeStarsS0Visuals();
       showTechKeywords();
     }, 2500));
-    /* 喘息：先让用户看清曲线 + 4 组关键词（末组约 11600ms 渐出消失），再弹出方向选择 */
-    starsTimeouts.push(setTimeout(function () { openStarsModal(); }, 11900));
+    /* 喘息：先让用户看清曲线 + 4 组关键词（末组逐个消失，约 15000ms 全退），再弹出方向选择 */
+    starsTimeouts.push(setTimeout(function () { openStarsModal(); }, 15400));
   }
 
   /* S0 视觉补完：历史路线若未画完则平滑补完 + 锚点/分叉点/可能性虚线就位。
@@ -1963,9 +1974,9 @@
     buildTurning();
     if (mapEl) mapEl.classList.remove("map-shift");
 
-    /* 40 秒 */
+    /* 30 秒 */
     clearSixtyTimeouts();
-    $("#sixty-timer").textContent = "40";
+    $("#sixty-timer").textContent = "30";
     var msg = $("#sixty-msg");
     msg.textContent = "";
     msg.classList.remove("show");

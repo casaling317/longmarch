@@ -1555,7 +1555,7 @@ body[data-phase="space"] .stars-route { opacity: 1; }
     0 0 34px rgba(90, 150, 255, 0.65);
   opacity: 0;
   transform: translate(-50%, -50%) scale(0.55);
-  transition: opacity 0.9s ease, transform 0.9s ease;
+  transition: opacity 1.8s ease-in-out, transform 1.5s ease-in-out;
   white-space: nowrap;
 }
 .tech-keyword.show {
