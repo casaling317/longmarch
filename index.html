@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="长征：从烽火到星辰 —— 一场跨越90年的交互式远征（数智交互 · 历史回望【险阻解码】）" />
+  <title>长征：从烽火到星辰</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body data-phase="prologue" data-scene="prologue">
+
+  <!-- ============ 持久背景层：纸张 → 地图 → 数据 → 星辰 ============ -->
+  <div id="bg" aria-hidden="true">
+    <div class="bg-grain"></div>
+
+    <svg class="bg-map" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+          <feGaussianBlur stdDeviation="6" result="b" />
+          <feMerge>
+            <feMergeNode in="b" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+
+      <!-- 地形等高线（占位视觉，非精确地理） -->
+      <g class="contours" fill="none" stroke="currentColor" stroke-width="1">
+        <path d="M -50,120 C 150,80 300,160 500,120 S 850,60 1050,140" />
+        <path d="M -50,220 C 200,180 350,260 550,220 S 900,160 1050,240" />
+        <path d="M -50,340 C 180,300 380,380 580,340 S 880,280 1050,360" />
+        <path d="M -50,460 C 220,420 400,500 600,460 S 900,400 1050,480" />
+        <path d="M -50,540 C 240,510 420,560 620,540 S 920,500 1050,560" />
+      </g>
+
+      <!-- 行军路线（占位视觉，随进度推进） -->
+      <path id="route" class="route"
+        d="M 60,520 C 180,480 220,420 300,400 C 380,380 420,300 520,300 C 620,300 660,240 760,220 C 840,205 900,160 950,120" />
+
+      <!-- 路线节点 -->
+      <g class="nodes" fill="currentColor">
+        <circle cx="60"  cy="520" r="4" />
+        <circle cx="300" cy="400" r="4" />
+        <circle cx="520" cy="300" r="4" />
+        <circle cx="760" cy="220" r="4" />
+        <circle cx="950" cy="120" r="5" />
+      </g>
+
+    </svg>
+
+    <!-- 90年后 专属路线：历史（已走过的路·暖实线，湘江→遵义→现在·屏幕中央）→ 分叉点 → 4 条可能性
+         选择哪个方向，对应路径真实延伸 + 点亮对应星。 -->
+    <svg class="stars-route" id="stars-route" viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      <defs>
+        <!-- 星球立体渐变（左上受光 → 右下背光） -->
+        <radialGradient id="srPlanetGrad" cx="35%" cy="30%" r="78%">
+          <stop offset="0%" stop-color="#eaf1ff" />
+          <stop offset="42%" stop-color="#9db4e0" />
+          <stop offset="100%" stop-color="#243356" />
+        </radialGradient>
+        <radialGradient id="srPlanetGradWarm" cx="35%" cy="30%" r="78%">
+          <stop offset="0%" stop-color="#fff4e0" />
+          <stop offset="42%" stop-color="#ffcf99" />
+          <stop offset="100%" stop-color="#6e421a" />
+        </radialGradient>
+      </defs>
+      <!-- 历史路线（湘江 → 遵义 → …… → 现在；已走过的路，向屏幕中央的"现在"延伸） -->
+      <path class="sr-hist" id="sr-hist"
+        d="M 80,500 C 150,480 205,452 250,430 C 295,408 400,345 500,300" />
+      <g class="sr-nodes">
+        <circle class="sr-node" cx="80" cy="500" r="5" />
+        <text class="sr-node-label" x="80" y="528" text-anchor="middle">湘江</text>
+        <circle class="sr-node" cx="250" cy="430" r="5" />
+        <text class="sr-node-label" x="250" y="458" text-anchor="middle">遵义</text>
+        <!-- 现在：历史延长线上的节点，历史与未来的交汇点（屏幕中央） -->
+        <circle class="sr-node sr-node-now" cx="500" cy="300" r="5" />
+        <text class="sr-node-label sr-node-label-now" x="500" y="280" text-anchor="middle">现在</text>
+      </g>
+
+      <!-- 现在（分叉点）：选择后光晕爆发，打开未来的路 -->
+      <circle class="sr-branch" id="sr-branch" cx="500" cy="300" r="6" />
+      <!-- 选择后的光晕：现在点爆发 + 光环扩散，打开未来的路（一次性动画，JS 触发） -->
+      <circle class="sr-halo-ring" id="sr-halo-ring-1" cx="500" cy="300" r="10" />
+      <circle class="sr-halo-ring" id="sr-halo-ring-2" cx="500" cy="300" r="10" />
+      <circle class="sr-halo-core" id="sr-halo-core" cx="500" cy="300" r="4" />
+
+      <!-- 4 条可能性：从"现在"向右上弯曲延伸（道路是曲折的）；选中那颗点亮成带轨道的星球
+           4 颗星 + 方向标签（data-d 供粒子/收束用，data-label 用于复位） -->
+      <g class="sr-star" id="sr-star-explore" data-dir="explore" data-d="M 500,300 C 560,240 650,165 730,120" data-label="探索未知">
+        <circle class="sr-star-halo" cx="730" cy="120" r="10" />
+        <circle class="sr-star-dot" cx="730" cy="120" r="7" />
+        <ellipse class="sr-star-orbit" cx="730" cy="120" rx="58" ry="18" transform="rotate(-20 730 120)" />
+        <text class="sr-star-label" x="730" y="120" text-anchor="middle">探索未知</text>
+      </g>
+      <g class="sr-star" id="sr-star-solve" data-dir="solve" data-d="M 500,300 C 600,265 720,215 830,180" data-label="解决真实问题">
+        <circle class="sr-star-halo" cx="830" cy="180" r="10" />
+        <circle class="sr-star-dot" cx="830" cy="180" r="7" />
+        <ellipse class="sr-star-orbit" cx="830" cy="180" rx="58" ry="18" transform="rotate(-20 830 180)" />
+        <text class="sr-star-label" x="830" y="180" text-anchor="middle">解决真实问题</text>
+      </g>
+      <g class="sr-star" id="sr-star-create" data-dir="create" data-d="M 500,300 C 600,306 730,302 850,300" data-label="创造新的可能">
+        <circle class="sr-star-halo" cx="850" cy="300" r="10" />
+        <circle class="sr-star-dot" cx="850" cy="300" r="7" />
+        <ellipse class="sr-star-orbit" cx="850" cy="300" rx="58" ry="18" transform="rotate(-20 850 300)" />
+        <text class="sr-star-label" x="850" y="300" text-anchor="middle">创造新的可能</text>
+      </g>
+      <g class="sr-star" id="sr-star-warm" data-dir="warm" data-d="M 500,300 C 545,255 600,200 640,150" data-label="让技术更有温度">
+        <circle class="sr-star-halo" cx="640" cy="150" r="10" />
+        <circle class="sr-star-dot" cx="640" cy="150" r="7" />
+        <ellipse class="sr-star-orbit" cx="640" cy="150" rx="58" ry="18" transform="rotate(-20 640 150)" />
+        <text class="sr-star-label" x="640" y="150" text-anchor="middle">让技术更有温度</text>
+      </g>
+
+      <!-- 收束汇聚光点（湘江 → 遵义 → 现在 → 用户星辰） -->
+      <circle class="sr-converge-dot" id="sr-converge-dot" cx="80" cy="500" r="5" />
+    </svg>
+
+    <div class="bg-space">
+      <div class="stars"><span class="star-dot"></span></div>
+      <div class="grid"></div>
+    </div>
+
+    <div class="wish-stars" id="wish-stars" aria-hidden="true"></div>
+
+    <div class="bg-vignette"></div>
+  </div>
+
+  <!-- ============ 顶栏：返回 / 标题 / 声音 ============ -->
+  <header id="topbar">
+    <button id="btn-back" class="icon-btn" aria-label="返回上一幕" style="visibility:hidden;">←</button>
+    <div id="topbar-title">长征 · 从烽火到星辰</div>
+    <button id="btn-sound" class="icon-btn" aria-label="声音开关">♪</button>
+  </header>
+
+  <!-- ============ 舞台：六幕 ============ -->
+  <main id="stage">
+
+    <!-- 页面1 序章《出发》 -->
+    <section class="scene" id="scene-prologue" data-scene="prologue">
+      <div class="scene-inner prologue-inner">
+        <div class="prologue-year">1934</div>
+        <p class="prologue-line">一支队伍出发了。</p>
+        <button class="btn btn-primary" data-action="next">开始远征</button>
+      </div>
+    </section>
+
+    <!-- 页面2 《险阻》（行囊） -->
+    <section class="scene" id="scene-obstacles" data-scene="obstacles">
+      <div class="scene-inner">
+        <h2 class="scene-title" id="obstacles-title"></h2>
+        <p class="scene-hint" id="obstacles-hint"></p>
+
+        <div class="pack" id="pack">
+          <div class="pack-head">
+            <span class="pack-label" id="pack-label"></span>
+            <span class="pack-cap" id="pack-cap">0/3</span>
+          </div>
+          <div class="pack-items" id="pack-items"><!-- JS 渲染已选物品 --></div>
+          <p class="pack-fullhint" id="pack-fullhint" hidden></p>
+        </div>
+
+        <div class="cards" id="cards"><!-- JS 渲染 4 件物品 --></div>
+
+        <div class="obstacles-result" id="obstacles-result" hidden>
+          <p class="pack-status" id="pack-status"></p>
+          <p class="result-line" id="obstacles-full-0"></p>
+          <p class="result-line" id="obstacles-full-1"></p>
+          <p class="result-line result-line-echo" id="obstacles-full-2"></p>
+          <p class="muted result-note" id="obstacles-simnote"></p>
+          <button class="btn btn-primary" data-action="next">进入真实历史</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 页面3 《湘江》（沉浸式历史场景） -->
+    <section class="scene" id="scene-xianghe" data-scene="xianghe">
+      <div class="scene-inner">
+        <div class="date-badge" id="xianghe-date"></div>
+        <p class="node-label" id="xianghe-node"></p>
+        <h2 class="scene-title">湘江</h2>
+        <p class="sub-label" id="xianghe-hint"></p>
+
+        <!-- 场景专属大地图：河流 / 渡口 / 行军路线 / 红一·三军团 / 三十四师（示意视觉，非精确地理；部队图标随剧情逐步出现） -->
+        <div class="xh-map-wrap" id="xh-map-wrap">
+          <svg class="xh-map" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+            <defs>
+              <marker id="xh-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0,0 L 10,5 L 0,10 z" fill="currentColor" />
+              </marker>
+              <!-- 追兵专用褐色箭头（与红军红色箭头区分，避免误读为红军前进方向） -->
+              <marker id="xh-arrow-kmt" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0,0 L 10,5 L 0,10 z" fill="#6b6154" />
+              </marker>
+            </defs>
+
+            <!-- 丘陵（示意） -->
+            <g class="xh-hills" fill="none" stroke="currentColor" stroke-width="1">
+              <path d="M 40,120 C 140,80 240,140 340,100 S 560,60 760,110" />
+              <path d="M 60,430 C 180,390 300,450 420,410 S 660,370 760,430" />
+            </g>
+
+            <!-- 湘江（粗描边） -->
+            <path class="xh-river" d="M 430,-20 C 400,120 470,220 430,300 C 390,380 450,440 420,520" />
+
+            <!-- 围追堵截：国民党第四道封锁线（两侧双虚线 + 防御工事，常显；呼应已核验 xh-d2“25 个师围追堵截”） -->
+            <g class="xh-enclose" fill="none" stroke-dasharray="10 7">
+              <path class="bl-echo" d="M 152,-20 C 172,140 122,300 192,520" />
+              <path class="bl-main" d="M 180,-20 C 200,140 150,300 220,520" />
+              <path class="bl-echo" d="M 668,-20 C 628,140 708,300 648,520" />
+              <path class="bl-main" d="M 640,-20 C 600,140 680,300 620,520" />
+            </g>
+            <!-- 封锁线防御工事（示意空心小方块，沿两侧封锁线分布） -->
+            <g class="xh-blockade-forts" aria-hidden="true">
+              <rect x="181" y="97" width="7" height="7" />
+              <rect x="177" y="224" width="7" height="7" />
+              <rect x="183" y="361" width="7" height="7" />
+              <rect x="198" y="452" width="7" height="7" />
+              <rect x="624" y="97" width="7" height="7" />
+              <rect x="634" y="224" width="7" height="7" />
+              <rect x="639" y="361" width="7" height="7" />
+              <rect x="630" y="452" width="7" height="7" />
+            </g>
+            <!-- 封锁线标签（常显，置于左侧虚线右侧） -->
+            <text class="xh-blockade-label" x="196" y="150">国民党第四道封锁线</text>
+            <text class="xh-blockade-sub" x="196" y="168">25 个师围追堵截</text>
+
+            <!-- 行军路线（红色，JS 驱动进度推进） -->
+            <path id="xh-route" class="xh-route"
+              d="M 90,470 C 180,440 240,380 300,340 C 350,308 380,290 430,270 C 480,250 540,230 600,200" />
+            <!-- 路线前端箭头：由 JS 沿路线推进，始终停在当前已画出路线的末端 -->
+            <g id="xh-tip-arrow" class="xh-tip-arrow" aria-hidden="true">
+              <path d="M -7,-4 L 9,0 L -7,4 Z" />
+            </g>
+            <!-- 红军前进方向标注（常显，红色，置于路线起点上方） -->
+            <text class="xh-route-label" x="100" y="450">红军前进方向</text>
+
+            <!-- 5 座渡口（随时间线点亮） -->
+            <g class="xh-fords">
+              <circle class="xh-ford" cx="436" cy="238" r="5" />
+              <circle class="xh-ford" cx="442" cy="262" r="5" />
+              <circle class="xh-ford" cx="440" cy="286" r="5" />
+              <circle class="xh-ford" cx="434" cy="310" r="5" />
+              <circle class="xh-ford" cx="428" cy="334" r="5" />
+            </g>
+
+            <!-- 5 座浮桥：时间线第 2 步时逐座搭起 -->
+            <g id="xh-bridges" class="xh-bridges" aria-hidden="true">
+              <line x1="426" y1="238" x2="446" y2="238" />
+              <line x1="432" y1="262" x2="452" y2="262" />
+              <line x1="430" y1="286" x2="450" y2="286" />
+              <line x1="424" y1="310" x2="444" y2="310" />
+              <line x1="418" y1="334" x2="438" y2="334" />
+            </g>
+
+            <!-- 红一、红三军团：时间线第 2 步先头抢渡后，出现在河对岸 -->
+            <g id="xh-corps" class="xh-corps" aria-hidden="true">
+              <circle cx="532" cy="256" r="7" />
+              <text x="532" y="282" text-anchor="middle">红一军团</text>
+              <circle cx="598" cy="272" r="7" />
+              <text x="598" y="298" text-anchor="middle">红三军团</text>
+            </g>
+
+            <!-- 三十四师（总后卫，被阻于江以东；时间线第 3 步出现，高潮时闪红）
+                 位置上移，避免文字与地图底部说明（terrain caption）重叠 -->
+            <g id="xh-34" class="xh-34" aria-hidden="true">
+              <circle cx="330" cy="335" r="7" />
+              <text x="330" y="361" text-anchor="middle">三十四师</text>
+            </g>
+
+            <!-- 高潮：阻击线从新圩·光华铺 / 脚山铺 / 渡口 / 两侧封锁线向三十四师汇聚（一次性克制动效，JS 触发 .play） -->
+            <g class="xh-converge" id="xh-converge" aria-hidden="true">
+              <line class="ray r1" x1="120" y1="300" x2="330" y2="335" />
+              <line class="ray r2" x1="560" y1="330" x2="330" y2="335" />
+              <line class="ray r3" x1="436" y1="262" x2="330" y2="335" />
+              <line class="ray r4" x1="200" y1="120" x2="330" y2="335" />
+              <line class="ray r5" x1="620" y1="460" x2="330" y2="335" />
+              <circle class="node-flash" cx="330" cy="335" r="8" />
+            </g>
+
+            <!-- 先头部队：随时间线沿路线行进 -->
+            <circle id="xh-marcher" class="xh-marcher" r="4.5" cx="90" cy="470" />
+
+            <!-- 国民党阻击部队（深色方块，常显；高潮合围光线由此出发） -->
+            <g class="xh-kmt" aria-hidden="true">
+              <!-- 桂军（李宗仁）：新圩 · 光华铺 -->
+              <rect x="115" y="295" width="10" height="10" />
+              <text class="kmt-place" x="132" y="304">新圩 · 光华铺</text>
+              <text class="kmt-force" x="132" y="320">桂军</text>
+              <!-- 第三兵团（何应钦）：脚山铺 -->
+              <rect x="555" y="325" width="10" height="10" />
+              <text class="kmt-place" x="572" y="334">脚山铺</text>
+              <text class="kmt-force" x="572" y="350">第三兵团</text>
+              <!-- 追兵：自西南尾随（褐色箭头，指向红军前进方向=尾随追击） -->
+              <text class="kmt-force" x="70" y="470">追兵</text>
+              <path class="kmt-arrow" d="M 75,478 L 115,458" marker-end="url(#xh-arrow-kmt)" />
+            </g>
+
+            <!-- 行军方向箭头（地形模块放大时显示） -->
+            <g id="xh-arrows" class="xh-arrows" fill="none" stroke-width="2">
+              <path d="M 150,430 L 220,395" marker-end="url(#xh-arrow)" />
+              <path d="M 250,360 L 330,320" marker-end="url(#xh-arrow)" />
+              <path d="M 470,250 L 550,215" marker-end="url(#xh-arrow)" />
+            </g>
+
+            <!-- 地形细节：放大时浮现（江名 / 5 座浮桥 / 封锁线 / 图例 / 指北针） -->
+            <g id="xh-terrain-detail" class="xh-terrain-detail" aria-hidden="true">
+              <!-- 湘江江名 -->
+              <text class="td-river-label" x="458" y="150">湘江</text>
+              <!-- 浮桥引线标注（桥位本体见 #xh-bridges，时间线第 2 步搭起） -->
+              <line class="td-bridge-lead" x1="452" y1="252" x2="500" y2="242" />
+              <text class="td-bridge-label" x="504" y="240">5 座浮桥</text>
+              <!-- 图例 -->
+              <g class="td-legend">
+                <rect x="480" y="84" width="168" height="140" rx="6" />
+                <line class="lg-river" x1="492" y1="108" x2="516" y2="108" />
+                <text x="524" y="112">湘江</text>
+                <circle class="lg-ford" cx="504" cy="134" r="4" />
+                <text x="524" y="138">渡口</text>
+                <line class="lg-route" x1="492" y1="160" x2="516" y2="160" />
+                <text x="524" y="164">行军路线</text>
+                <line class="lg-blockade" x1="492" y1="186" x2="516" y2="186" />
+                <rect class="lg-blockade-fort" x="500" y="182" width="8" height="8" />
+                <text x="524" y="190">国民党封锁线</text>
+                <rect class="lg-kmt" x="498" y="206" width="12" height="12" />
+                <text x="524" y="216">国民党阻击部队</text>
+              </g>
+              <!-- 指北针 -->
+              <g class="td-compass">
+                <line x1="652" y1="132" x2="652" y2="92" />
+                <path d="M 652,82 l -7,14 l 7,-4 l 7,4 z" />
+                <text x="652" y="150" text-anchor="middle">北</text>
+              </g>
+            </g>
+          </svg>
+          <!-- 高潮暗角：牺牲瞬间压暗边缘，聚焦三十四师（JS 加 .climax 时淡入） -->
+          <div class="xh-vignette" aria-hidden="true"></div>
+          <div class="xh-date" id="xh-date">1934 年 11 月 25 日</div>
+          <p class="xh-caption" id="xh-caption"></p>
+          <p class="xh-maphint" id="xh-maphint"></p>
+        </div>
+
+        <!-- 4 个模块：每次点击都改变地图 / 图版 -->
+        <div class="xh-modules" id="xh-modules"><!-- JS 渲染 4 个模块 --></div>
+        <div class="xh-progress is-empty" id="xh-progress">模块 <span id="xh-lit">0</span> / 4<span class="xh-progress-hint" id="xh-progress-hint">还需点亮 4 个，集齐进入下一步</span></div>
+
+        <!-- 大幅图版：史料 / 人物 -->
+        <div class="xh-plate" id="xh-plate" hidden>
+          <img id="xh-plate-img" class="xh-plate-img" alt="" />
+          <div class="xh-plate-body">
+            <h3 class="xh-plate-title" id="xh-plate-title"></h3>
+            <p class="xh-plate-cap" id="xh-plate-cap"></p>
+            <p class="xh-plate-src" id="xh-plate-src"></p>
+            <p class="xh-plate-note" id="xh-plate-note">艺术再现（AI 生成），非历史照片</p>
+          </div>
+        </div>
+
+        <!-- 高潮·牺牲时刻：4 个模块全部激活 + 配乐响起后触发（全场暗 + 英雄牺牲图 + 史实推送 + 下一步） -->
+        <div class="xh-climax" id="xh-climax" hidden>
+          <div class="climax-inner">
+            <figure class="climax-figure">
+              <img id="climax-img" class="climax-img" alt="湘江战役·英雄牺牲（艺术再现）" />
+              <figcaption class="climax-img-note" id="climax-img-note"></figcaption>
+            </figure>
+            <p class="climax-line" id="climax-0"></p>
+            <p class="climax-line" id="climax-1"></p>
+            <p class="climax-fact" id="climax-fact"></p>
+            <div class="pack-echo" id="xh-pack-echo" hidden>
+              <p class="pack-echo-line"></p>
+              <p class="pack-echo-line"></p>
+            </div>
+            <button class="btn btn-primary" id="btn-xianghe-decode">下一步</button>
+          </div>
+        </div>
+
+        <div class="decode" id="decode" hidden>
+          <h3 class="decode-title">史实解码</h3>
+          <p class="decode-lead">长征的困难从来不是单一因素，而是多重压力同时作用。</p>
+          <div class="fact-list" id="xianghe-facts"><!-- JS 渲染全部 7 条史实（xh-1 + xh-d1~d6） --></div>
+          <p class="date-note" id="xianghe-date-note"></p>
+          <button class="btn btn-primary" data-action="next">继续</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 页面4 《转折》 -->
+    <section class="scene" id="scene-turning" data-scene="turning">
+      <div class="scene-inner">
+        <div class="date-badge" id="turning-date"></div>
+        <h2 class="scene-title" id="turning-title">走得更远，有时意味着重新判断方向。</h2>
+
+        <p class="turning-question" id="turning-question"></p>
+
+        <!-- 场景专属地图：湘江 → 遵义（选择后路线推进 + 方向标记 + 遵义点亮） -->
+        <div class="zn-map-wrap" id="zn-map-wrap">
+          <svg id="zn-map" class="zn-map" viewBox="0 0 800 320" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+            <!-- 未走之路（虚线幽灵路线） -->
+            <path class="zn-ghost"
+              d="M 120,200 C 250,190 350,160 450,140 C 550,120 620,115 680,120" />
+            <!-- 已走之路（红线，JS 驱动推进） -->
+            <path id="zn-route" class="zn-route"
+              d="M 120,200 C 250,190 350,160 450,140 C 550,120 620,115 680,120" />
+
+            <!-- 湘江节点（已在脚下） -->
+            <circle class="zn-node-xh" cx="120" cy="200" r="6" />
+            <text class="zn-label" x="120" y="232" text-anchor="middle">湘江</text>
+
+            <!-- 遵义节点（抵达前显示"？"，抵达后切换为"遵义"并点亮） -->
+            <circle id="zn-node-zn" class="zn-node-zn" cx="680" cy="120" r="6" />
+            <text class="zn-label zn-label-q" x="680" y="152" text-anchor="middle">？</text>
+            <text class="zn-label zn-label-zn" x="680" y="152" text-anchor="middle">遵义</text>
+
+            <!-- 方向标记：A=战斗 / B=决策 / C=方向（默认隐藏，选择后显示） -->
+            <g class="zm zm-battle" id="zm-battle">
+              <path d="M 450,130 L 452.4,136.8 L 459.5,136.9 L 453.8,141.2 L 455.9,148.1 L 450,144 L 444.1,148.1 L 446.2,141.2 L 440.5,136.9 L 447.6,136.8 Z" />
+              <text x="450" y="170" text-anchor="middle">战斗</text>
+            </g>
+            <g class="zm zm-decide" id="zm-decide">
+              <circle cx="450" cy="140" r="9" />
+              <text x="450" y="170" text-anchor="middle">决策</text>
+            </g>
+            <g class="zm zm-direction" id="zm-direction">
+              <line x1="430" y1="152" x2="464" y2="131" />
+              <path d="M 468,129 l -12,-2 l 7,9 z" />
+              <text x="450" y="170" text-anchor="middle">方向</text>
+            </g>
+          </svg>
+          <p class="zn-maphint" id="zn-maphint"></p>
+        </div>
+
+        <div class="options" id="turning-options"><!-- JS 渲染 3 个方向 --></div>
+        <p class="turning-hint" id="turning-hint"></p>
+
+        <!-- 选择后的即时反馈（每个方向独立文案，可换选） -->
+        <p class="turning-feedback" id="turning-feedback" hidden></p>
+
+        <p class="turning-chosen" id="turning-chosen" hidden></p>
+        <p class="turning-reveal" id="turning-reveal" hidden></p>
+        <p class="turning-reveal-ans" id="turning-reveal-ans" hidden></p>
+        <div class="pack-echo" id="turning-pack-echo" hidden>
+          <p class="pack-echo-line"></p>
+          <p class="pack-echo-line"></p>
+        </div>
+
+        <div class="fact-list" id="turning-facts" hidden></div>
+        <button class="btn btn-primary" id="btn-turning-next" hidden>继续</button>
+      </div>
+    </section>
+
+    <!-- 页面5 《60 秒》 -->
+    <section class="scene" id="scene-sixty" data-scene="sixty">
+      <div class="scene-inner sixty-inner">
+        <h2 class="scene-title">40秒<span class="title-dot"></span>历史现场重现</h2>
+        <div class="sixty-timer" id="sixty-timer">40</div>
+
+        <!-- 预告：两个瞬间（提示后面有什么，兼作进度） -->
+        <div class="sixty-preview" id="sixty-preview"><!-- JS 渲染 --></div>
+
+        <!-- 当前瞬间：标签 + 现场 + 3 个行动 -->
+        <div class="sixty-stage" id="sixty-stage">
+          <div class="sixty-moment" id="sixty-moment"></div>
+          <p class="sixty-scene" id="sixty-scene"></p>
+          <div class="options" id="sixty-options"><!-- JS 渲染 3 个行动 --></div>
+          <p class="sixty-hint" id="sixty-hint" hidden></p>
+        </div>
+
+        <!-- 历史回声：选择后浮现，连到已有史实 -->
+        <p class="sixty-echo" id="sixty-echo"></p>
+
+        <p class="sixty-msg" id="sixty-msg"></p>
+
+        <!-- 升华块：你的路径 + 历史呼应 + 精神句 + 桥接星辰（走完/跳过都必现） -->
+        <div class="sixty-end" id="sixty-end" hidden>
+          <p class="sixty-end-path" id="sixty-end-path"></p>
+          <p class="sixty-end-history" id="sixty-end-history"></p>
+          <p class="sixty-end-spirit" id="sixty-end-spirit"></p>
+          <p class="sixty-end-bridge" id="sixty-end-bridge"></p>
+        </div>
+
+        <button class="btn btn-primary" id="btn-sixty-continue" data-action="next" hidden>继续向前</button>
+      </div>
+    </section>
+
+    <!-- 页面6 《从烽火到星辰》：S0 时空转场 → S1 问题+选择 → S2 一个词(可选) → S3 收束 -->
+    <section class="scene" id="scene-stars" data-scene="stars">
+      <div class="scene-inner stars-inner">
+
+        <!-- S0 时空转场（3 行逐行淡入，不自动跳转，由用户点"进入 →"进入 S1 弹窗） -->
+        <div class="stars-stage" id="stars-s0">
+          <div class="stars-lines" id="stars-lines"><!-- JS 渲染 3 行 --></div>
+          <button class="btn btn-primary stars-skip" id="btn-stars-skip" hidden>进入 →</button>
+        </div>
+
+        <!-- S1 弹窗：居中问题 + 4 方向（类似师长牺牲页的沉浸弹窗）；选择后弹窗平滑关闭，分叉点光晕打开未来的路 -->
+        <div class="stars-stage stars-modal" id="stars-s1" hidden>
+          <div class="stars-modal-card">
+            <p class="stars-question" id="stars-question"></p>
+            <p class="stars-poss-note" id="stars-poss-note"></p>
+            <div class="stars-modal-options" id="stars-options"></div>
+          </div>
+        </div>
+
+        <!-- 选择后的回应层（弹窗关闭后浮现，底部居中，不挡路线） -->
+        <div class="stars-after-layer" id="stars-after-layer" hidden>
+          <p class="stars-decided" id="stars-decided" hidden></p>
+          <p class="stars-dir-response" id="stars-dir-response" hidden></p>
+          <p class="wish-response" id="wish-response" hidden></p>
+        </div>
+
+        <!-- S2 一个词：弹窗输入（完全可选，不填可直接收束） -->
+        <div class="stars-stage stars-modal" id="stars-s2" hidden>
+          <div class="stars-modal-card">
+            <p class="wish-title" id="wish-title"></p>
+            <div class="wish-row">
+              <input class="wish-input" id="wish-input" type="text" maxlength="10" autocomplete="off" />
+              <button class="btn btn-primary wish-btn" id="btn-wish">落下</button>
+            </div>
+            <p class="wish-hint" id="wish-hint"></p>
+            <button class="btn btn-ghost stars-s2-skip" id="btn-stars-s2-skip"></button>
+          </div>
+        </div>
+
+        <!-- S3 收束：完整路径汇聚 + 渐入窗口（下一段路，轮到我们了 + 再走一次 + 查看史实与来源） -->
+        <div class="stars-stage" id="stars-s3" hidden>
+          <div class="stars-end-card" id="stars-end-card">
+            <p class="stars-final" id="stars-final"></p>
+            <div class="stars-cta">
+              <button class="btn btn-ghost" data-action="replay">再走一次</button>
+              <button class="btn btn-primary" data-action="sources">查看史实与来源</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 科技发展关键词：路线抵达"现在"时渐入渐出（背景浮现，非知识卡） -->
+      <div class="stars-tech" id="stars-tech-keywords" aria-hidden="true"></div>
+
+      <!-- S3 背景压暗层：让收束窗口在亮背景上更醒目（覆盖路线，窗口在其上） -->
+      <div class="stars-dim" id="stars-dim" aria-hidden="true"></div>
+    </section>
+
+  </main>
+
+  <!-- ============ 来源页（覆盖层，A/B/C/D） ============ -->
+  <div id="sources" class="overlay" hidden>
+    <div class="overlay-inner">
+      <button class="icon-btn overlay-close" data-action="close-sources" aria-label="返回">←</button>
+      <h2 class="overlay-title">史实与来源</h2>
+      <p class="sources-note" id="sources-note"></p>
+
+      <section class="src-section">
+        <h3 class="src-section-title" id="src-history-title"></h3>
+        <div class="fact-list" id="src-history"></div>
+      </section>
+
+      <section class="src-section">
+        <h3 class="src-section-title" id="src-tech-title"></h3>
+        <p class="src-tech-note" id="src-tech-note"></p>
+        <div class="fact-list" id="src-tech"></div>
+      </section>
+
+      <section class="src-section">
+        <h3 class="src-section-title" id="src-ai-title"></h3>
+        <div class="src-ai" id="src-ai"></div>
+      </section>
+
+      <section class="src-section">
+        <h3 class="src-section-title" id="src-sim-title"></h3>
+        <p class="src-sim" id="src-sim"></p>
+      </section>
+
+      <p class="sources-disclaimer" id="sources-disclaimer"></p>
+    </div>
+  </div>
+
+  <script src="js/content.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
