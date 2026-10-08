@@ -1574,9 +1574,20 @@ body[data-phase="space"] .stars-route { opacity: 1; }
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+/* 手机端：viewBox 裁剪放大后，图内元素（线段/节点/文字）同步放大——
+   原尺寸下图内 13px ≈ 屏幕 7.6px，不可读（.sr-node-now 的 r 用 CSS 几何属性，现代浏览器均支持） */
+@media (max-width: 959px) {
+  .sr-hist { stroke-width: 4; }
+  .sr-node-now { r: 8; }
+  .sr-node-label { font-size: 20px; }
+  .sr-node-label-now { font-size: 22px; }
+  .sr-star-label { font-size: 18px; }
+  .sr-word { font-size: 20px; }
+}
 
 /* 科技发展关键词：路线抵达"现在"时按时代分 4 组浮现（背景浮现，非知识卡）
-   排在屏幕中间空白处，字号从小到大，字体周边光晕与暗背景形成反差 */
+   桌面：排在屏幕中间空白处；手机：从"现在"节点上方起左右交替上升级联；
+   字号从小到大，字体周边光晕与暗背景形成反差 */
 .stars-tech {
   position: absolute;
   inset: 0;

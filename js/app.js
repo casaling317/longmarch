@@ -1410,6 +1410,7 @@
 
     /* 只显示 S0 */
     showStarsStage("s0");
+    applyStarsMobileLayout(); /* 窄屏：裁剪 viewBox + 换曲线（starsState 已置 s0，曲线保持隐藏） */
 
     var t = [];
     /* 背景数字化（红 → 青白数据粒子） */
@@ -1434,15 +1435,41 @@
     });
   }
 
+  /* 窄屏（手机/平板竖屏 <960px）星辰幕布局：
+     1) viewBox 裁剪到"曲线尾 + 现在 + 4 星"区域（缩放 0.375 → 0.586，线段与文字放大约 56%）；
+     2) 历史曲线改从屏幕左缘起笔，绘制动画全程在屏内可见（湘江/遵义节点在屏外，手机端不再显示）；
+     桌面恢复原 viewBox 与曲线。进入幕时（showStarsStage("s0") 之后）与窗口 resize 时调用。 */
+  var STARS_VB_DESKTOP = "0 0 1000 600";
+  var STARS_VB_MOBILE = "300 40 640 520";
+  var SR_HIST_D_DESKTOP = "M 80,500 C 150,480 205,452 250,430 C 295,408 400,345 500,300";
+  var SR_HIST_D_MOBILE = "M 300,410 C 360,382 430,345 500,300";
+
+  function applyStarsMobileLayout() {
+    if (!starsRouteEl || !starsHistEl) return;
+    var narrow = window.innerWidth < 960;
+    starsRouteEl.setAttribute("viewBox", narrow ? STARS_VB_MOBILE : STARS_VB_DESKTOP);
+    var d = narrow ? SR_HIST_D_MOBILE : SR_HIST_D_DESKTOP;
+    if (starsHistEl.getAttribute("d") !== d) {
+      starsHistEl.setAttribute("d", d);
+      if (starsHistEl.getTotalLength) {
+        starsHistLen = starsHistEl.getTotalLength();
+        starsHistEl.style.transition = "none";
+        starsHistEl.style.strokeDasharray = starsHistLen;
+        /* 已绘制（S1 之后）保持可见，否则（S0）保持隐藏 */
+        starsHistEl.style.strokeDashoffset = (starsState !== "s0") ? "0" : String(starsHistLen);
+      }
+    }
+  }
+
   /* 科技发展关键词：路线抵达"现在"时按时间顺序分 4 组浮现（一次二三个），
-     字号从小到大；每组渐入→停留→渐出后接下一组。纯背景浮现，非知识卡 */
+     字号从小到大；每组渐入→停留→渐出后接下一组。纯背景浮现，非知识卡。
+     窄屏：从"现在"节点上方起、左右交替的上升级联（时代越晚出现得越高，词向星空上浮），
+     字号用 clamp 随视口缩小（375px 屏约 70%），保底 13px */
   function showTechKeywords() {
     var container = $("#stars-tech-keywords");
     if (!container) return;
     container.innerHTML = "";
     var groups = (CONTENT.stars && CONTENT.stars.techKeywordGroups) || [];
-    /* 窄屏（手机/平板竖屏，<960px）：关键词改用 mx/my 居中竖排，
-       避免 % 散排在窄屏上互相叠压；字号用 clamp 随视口缩小（375px 屏约 55%），保底 13px */
     var narrow = window.innerWidth < 960;
     var GROUP_GAP = 2200;  /* 组间隔（ms） */
     var IN_STAGGER = 450;  /* 组内逐个渐入的间隔（ms） */
@@ -1456,8 +1483,8 @@
         el.className = "tech-keyword";
         el.style.left = (narrow && kw.mx != null ? kw.mx : kw.x) + "%";
         el.style.top = (narrow && kw.my != null ? kw.my : kw.y) + "%";
-        var minPx = Math.max(13, Math.round(g.size * 0.55));
-        var vw = (g.size * 0.55 / 3.75).toFixed(2);
+        var minPx = Math.max(13, Math.round(g.size * 0.7));
+        var vw = (g.size * 0.7 / 3.75).toFixed(2);
         el.style.fontSize = "clamp(" + minPx + "px, " + vw + "vw, " + g.size + "px)";
         el.textContent = kw.t;
         container.appendChild(el);
@@ -1647,8 +1674,9 @@
     }, 2150));
 
     /* 光晕开路 + 回应读完，再进入 S2（一个词，必填）
-       回应 1650ms 浮现、"这一次，路线由你决定" 2150ms 浮现，留约 3.8s 阅读时间（8000ms 偏长，用户要求缩短 2s → 6000ms） */
-    starsTimeouts.push(setTimeout(function () { enterS2(); }, 6000));
+       回应 1650ms 浮现、"这一次，路线由你决定" 2150ms 浮现，留约 2.35s 阅读时间
+       （8000ms 偏长 → 6000ms → 用户仍觉输入框出现慢，再缩 1.5s → 4500ms） */
+    starsTimeouts.push(setTimeout(function () { enterS2(); }, 4500));
   }
 
   /* 方向即时回应（预置一句，非真实 AI）——显示在 S1 底部 */
@@ -1749,13 +1777,21 @@
   function enterS3() {
     if (starsState !== "s2") return;
     clearStarsTimeouts();
-    /* 先清理 S2 词回应层（原先未隐藏，回应文字会残留到 S3 汇聚画面里） */
+    /* 先清理 S2 回应层（原先未隐藏，回应文字会残留到 S3 汇聚画面里）；
+       例外："这一颗星，属于你。"（默认回应）保留到结束——这颗星属于用户，这句话陪他走到结束卡
+       （"再走一次"时 resetStars 会统一复位） */
+    var resp = $("#wish-response");
+    var keepWish = !!(resp && resp.textContent === (CONTENT.stars && CONTENT.stars.wordDefault));
     var layer = $("#stars-after-layer");
-    if (layer) { layer.classList.remove("show"); layer.hidden = true; }
-    ["stars-decided", "stars-dir-response", "wish-response"].forEach(function (id) {
+    if (layer) {
+      if (keepWish) { layer.hidden = false; layer.classList.add("show"); }
+      else { layer.classList.remove("show"); layer.hidden = true; }
+    }
+    ["stars-decided", "stars-dir-response"].forEach(function (id) {
       var el = $("#" + id);
       if (el) { el.hidden = true; el.classList.remove("show"); }
     });
+    if (resp && !keepWish) { resp.hidden = true; resp.classList.remove("show"); }
     showStarsStage("s3");
     starsConverge();
     var t = [];
@@ -2069,6 +2105,11 @@
     /* 90年后：S0 提前进入 / S2 落下一个词(必填) */
     $("#btn-stars-skip").addEventListener("click", enterS1);
     $("#btn-wish").addEventListener("click", landWord);
+
+    /* 星辰幕窄屏布局：屏幕旋转 / 窗口尺寸变化时重新应用 viewBox 裁剪与曲线 */
+    window.addEventListener("resize", function () {
+      if (document.body.dataset.scene === "stars") applyStarsMobileLayout();
+    });
   }
 
   if (document.readyState === "loading") {
