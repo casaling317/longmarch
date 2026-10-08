@@ -18,6 +18,10 @@
 [hidden] { display: none !important; }
 
 html, body { height: 100%; }
+/* 手机浏览器（iOS Safari 等）：dvh 跟随实际可视视口，避免内容被地址栏遮住 */
+@supports (height: 100dvh) {
+  html, body { height: 100dvh; }
+}
 
 body {
   font-family: var(--sans);
@@ -1077,7 +1081,8 @@ body[data-phase="map"] .observe-item.lit .o-label { color: #9c2f2f; }
   background: var(--card-bg);
   color: var(--ink);
   font-family: var(--sans);
-  font-size: 15px;
+  /* 16px 是 iOS Safari 不自动放大的临界值（<16px 聚焦时页面会被整体放大） */
+  font-size: 16px;
   letter-spacing: 0.04em;
   outline: none;
   transition: border-color 0.3s ease;

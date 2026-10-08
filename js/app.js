@@ -1441,6 +1441,9 @@
     if (!container) return;
     container.innerHTML = "";
     var groups = (CONTENT.stars && CONTENT.stars.techKeywordGroups) || [];
+    /* 窄屏（手机/平板竖屏，<960px）：关键词改用 mx/my 居中竖排，
+       避免 % 散排在窄屏上互相叠压；字号用 clamp 随视口缩小（375px 屏约 55%），保底 13px */
+    var narrow = window.innerWidth < 960;
     var GROUP_GAP = 2200;  /* 组间隔（ms） */
     var IN_STAGGER = 450;  /* 组内逐个渐入的间隔（ms） */
     var IN_DUR = 1800;     /* 单个词渐入时长（ms），与 CSS opacity 过渡一致 */
@@ -1451,9 +1454,11 @@
       g.items.forEach(function (kw) {
         var el = document.createElement("span");
         el.className = "tech-keyword";
-        el.style.left = kw.x + "%";
-        el.style.top = kw.y + "%";
-        el.style.fontSize = g.size + "px";
+        el.style.left = (narrow && kw.mx != null ? kw.mx : kw.x) + "%";
+        el.style.top = (narrow && kw.my != null ? kw.my : kw.y) + "%";
+        var minPx = Math.max(13, Math.round(g.size * 0.55));
+        var vw = (g.size * 0.55 / 3.75).toFixed(2);
+        el.style.fontSize = "clamp(" + minPx + "px, " + vw + "vw, " + g.size + "px)";
         el.textContent = kw.t;
         container.appendChild(el);
         els.push(el);
