@@ -140,6 +140,8 @@
       <div class="scene-inner prologue-inner">
         <div class="prologue-year">1934</div>
         <p class="prologue-line">一支队伍出发了。</p>
+        <p class="prologue-sub">接下来，你会在几个关键时刻做出选择——</p>
+        <p class="prologue-sub">没有对错，只有历史，和你自己的路。</p>
         <button class="btn btn-primary" data-action="next">开始远征</button>
       </div>
     </section>
@@ -339,6 +341,9 @@
           <p class="xh-maphint" id="xh-maphint"></p>
         </div>
 
+        <!-- 首次进入提示：淡入 + 呼吸，点击任一模块后淡出（每次打开页面只提示一次） -->
+        <p class="xh-firsthint" id="xh-firsthint" hidden>▼ 点击下方模块，逐个点亮</p>
+
         <!-- 4 个模块：每次点击都改变地图 / 图版 -->
         <div class="xh-modules" id="xh-modules"><!-- JS 渲染 4 个模块 --></div>
         <div class="xh-progress is-empty" id="xh-progress">模块 <span id="xh-lit">0</span> / 4<span class="xh-progress-hint" id="xh-progress-hint">还需点亮 4 个，集齐进入下一步</span></div>
@@ -455,6 +460,9 @@
         <!-- 预告：两个瞬间（提示后面有什么，兼作进度） -->
         <div class="sixty-preview" id="sixty-preview"><!-- JS 渲染 --></div>
 
+        <!-- 首次进入提示：淡入 + 呼吸，选第一个行动后淡出（每次打开页面只提示一次） -->
+        <p class="sixty-firsthint" id="sixty-firsthint" hidden>▼ 每个瞬间，选一个行动</p>
+
         <!-- 当前瞬间：标签 + 现场 + 3 个行动 -->
         <div class="sixty-stage" id="sixty-stage">
           <div class="sixty-moment" id="sixty-moment"></div>
@@ -480,7 +488,7 @@
       </div>
     </section>
 
-    <!-- 页面6 《从烽火到星辰》：S0 时空转场 → S1 问题+选择 → S2 一个词(可选) → S3 收束 -->
+    <!-- 页面6 《从烽火到星辰》：S0 时空转场 → S1 问题+选择 → S2 一个词(必填) → S3 收束 -->
     <section class="scene" id="scene-stars" data-scene="stars">
       <div class="scene-inner stars-inner">
 
@@ -506,7 +514,7 @@
           <p class="wish-response" id="wish-response" hidden></p>
         </div>
 
-        <!-- S2 一个词：弹窗输入（完全可选，不填可直接收束） -->
+        <!-- S2 一个词：弹窗输入（必填） -->
         <div class="stars-stage stars-modal" id="stars-s2" hidden>
           <div class="stars-modal-card">
             <p class="wish-title" id="wish-title"></p>
@@ -515,7 +523,6 @@
               <button class="btn btn-primary wish-btn" id="btn-wish">落下</button>
             </div>
             <p class="wish-hint" id="wish-hint"></p>
-            <button class="btn btn-ghost stars-s2-skip" id="btn-stars-s2-skip"></button>
           </div>
         </div>
 

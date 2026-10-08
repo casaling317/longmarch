@@ -53,6 +53,7 @@
   var xhTipArrowEl = null;   /* 路线前端箭头（随绘制进度移动） */
   var convergePlayed = false; /* 光线汇聚每次游玩只播一次 */
   var convergeTimer = null;
+  var xhHintDismissed = false; /* 湘江首次提示已点掉（每次打开页面只提示一次） */
 
   /* 转折：玩家已选方向（null = 未选） */
   var turningChosen = null;
@@ -66,8 +67,9 @@
   var sixtyDone = false;
   var sixtyTimeouts = [];
   var sixtySayTimer = null; /* 反馈句淡入定时器（可重选时清掉上一条，避免竞态） */
+  var sixtyHintDismissed = false; /* 30秒首次提示已点掉（每次打开页面只提示一次） */
 
-  /* 90年后 状态机（S0 时空转场 → S1 问题+选择 → S2 一个词(可选) → S3 收束） */
+  /* 90年后 状态机（S0 时空转场 → S1 问题+选择 → S2 一个词(必填) → S3 收束） */
   var starsTimeouts = [];
   var starsState = "s0";        /* 当前状态 s0/s1/s2/s3 */
   var starsChosen = null;       /* 已选方向 id（null = 未选） */
@@ -378,7 +380,23 @@
   }
 
   /* 模块分发：每次点击都产生地图 / 图版上的可见变化 */
+  /* 首次进入提示：淡入 + 呼吸，点任一模块后淡出（每次打开页面只提示一次） */
+  function xhShowFirstHint() {
+    var hint = $("#xh-firsthint");
+    if (!hint) return;
+    hint.hidden = false;
+    void hint.offsetWidth; /* 强制重排，确保 opacity 0→1 过渡可见 */
+    hint.classList.add("show");
+  }
+  function xhDismissFirstHint() {
+    var hint = $("#xh-firsthint");
+    if (!hint) return;
+    hint.classList.remove("show");
+    setTimeout(function () { hint.hidden = true; }, 650);
+  }
+
   function xhModule(id, el) {
+    if (!xhHintDismissed) { xhHintDismissed = true; xhDismissFirstHint(); }
     if (id === "timeline") xhTimeline(el);
     else if (id === "terrain") xhTerrain(el);
     else if (id === "materials") xhMaterials(el);
@@ -934,6 +952,16 @@
     clearSixtyStage();
     clearSixtyEcho();
     hideSixtyEnd();
+    /* 首次进入提示（每次打开页面只提示一次，选第一个行动后消失） */
+    var fh = $("#sixty-firsthint");
+    if (fh) {
+      if (!sixtyHintDismissed) {
+        fh.hidden = false; void fh.offsetWidth; /* 强制重排，确保 opacity 0→1 过渡可见 */
+        fh.classList.add("show");
+      } else {
+        fh.hidden = true; fh.classList.remove("show");
+      }
+    }
     /* 恢复体验区占位（finishSixty 里会被收起，避免升华块上方留空） */
     $("#sixty-stage").style.display = "";
     $("#sixty-echo").style.display = "";
@@ -1019,6 +1047,11 @@
   /* 玩家选择行动：可重选（不锁死、不置灰），每选项独立反馈；始终记录最新选择（体验式，不评判） */
   function chooseSixtyOption(i, optionId, el) {
     if (sixtyDone) return;
+    if (!sixtyHintDismissed) {
+      sixtyHintDismissed = true;
+      var fh = $("#sixty-firsthint");
+      if (fh) { fh.classList.remove("show"); setTimeout(function () { fh.hidden = true; }, 650); }
+    }
     sixtyChosen[i] = optionId;
     var s = CONTENT.sixty.situations[i];
     /* 可重选：只高亮当前选择，其余保持可选（不加 dim/不锁） */
@@ -1061,6 +1094,9 @@
     if (window.AudioAmbient) window.AudioAmbient.stop();
     $("#sixty-timer").textContent = "0";
     clearSixtyStage();
+    /* 收起首次提示（用户一个都没选时，提示不能残留在升华块上方） */
+    var fh = $("#sixty-firsthint");
+    if (fh) { fh.classList.remove("show"); fh.hidden = true; }
     clearSixtyEcho();
     var msg = $("#sixty-msg");
     msg.classList.remove("show");
@@ -1194,7 +1230,7 @@
     if (window.AudioAmbient) window.AudioAmbient.stop();
   }
 
-  /* ---------- 页面6 《从烽火到星辰》：S0 时空转场 → S1 问题+选择 → S2 一个词(可选) → S3 收束 ---------- */
+  /* ---------- 页面6 《从烽火到星辰》：S0 时空转场 → S1 问题+选择 → S2 一个词(必填) → S3 收束 ---------- */
 
   /* 渲染 S0 的 3 行时空转场文案 */
   function buildStarsLines() {
@@ -1369,7 +1405,6 @@
     $("#wish-input").placeholder = CONTENT.stars.wordPlaceholder;
     $("#btn-wish").textContent = CONTENT.stars.wordBtn;
     $("#wish-hint").textContent = CONTENT.stars.wordHint;
-    $("#btn-stars-s2-skip").textContent = CONTENT.stars.wordSkip;
     $("#stars-final").textContent = CONTENT.stars.final;
     renderStarsOptions();
 
@@ -1606,7 +1641,7 @@
       decided.classList.add("show");
     }, 2150));
 
-    /* 光晕开路 + 回应读完，再进入 S2（一个词，完全可选）
+    /* 光晕开路 + 回应读完，再进入 S2（一个词，必填）
        回应 1650ms 浮现、"这一次，路线由你决定" 2150ms 浮现，留约 3.8s 阅读时间（8000ms 偏长，用户要求缩短 2s → 6000ms） */
     starsTimeouts.push(setTimeout(function () { enterS2(); }, 6000));
   }
@@ -1622,7 +1657,7 @@
     el.classList.add("show");
   }
 
-  /* S1 → S2：一个词（完全可选）；回应层收起，弹出输入弹窗 */
+  /* S1 → S2：一个词（必填）；回应层收起，弹出输入弹窗 */
   function enterS2() {
     if (starsState !== "s1") return;
     clearStarsTimeouts();
@@ -1635,34 +1670,39 @@
     showStarsStage("s2");
   }
 
-  /* 落下一个词（可选）：关闭弹窗 → 词落在点亮的星旁 + 底部回应浮现 → 收束 */
+  /* 落下一个词（必填）：空输入 → 轻提示 + 抖动，不收束；填了 → 关闭弹窗 → 词落在点亮的星旁 + 底部回应浮现 → 收束 */
   function landWord() {
     if (starsState !== "s2") return;
     var input = $("#wish-input");
     var val = (input.value || "").trim();
-    if (val) {
-      landWordAtStar(val);
-      input.value = "";
-      if (input.blur) input.blur();
-      /* 关闭 S2 弹窗，露出路线与星辰 */
-      var s2 = $("#stars-s2");
-      if (s2) s2.hidden = true;
-      /* 底部回应浮现 */
-      var resp = $("#wish-response");
-      resp.textContent = wordResponseFor(val);
-      resp.hidden = false;
-      resp.classList.remove("show");
-      void resp.offsetWidth;
-      resp.classList.add("show");
-      var layer = $("#stars-after-layer");
-      if (layer) { layer.hidden = false; void layer.offsetWidth; layer.classList.add("show"); }
-      /* 给 2.2s 看词落下与回应，再收束 */
-      clearStarsTimeouts();
-      starsTimeouts.push(setTimeout(function () { enterS3(); }, 2200));
-    } else {
-      /* 不填 → 直接收束（不增加多余确认步骤） */
-      enterS3();
+    if (!val) {
+      /* 必填：空输入时轻提示 + 抖动，不进入收束 */
+      var hint = $("#wish-hint");
+      if (hint) hint.textContent = CONTENT.stars.wordHintEmpty;
+      if (input.focus) input.focus();
+      input.classList.remove("shake");
+      void input.offsetWidth;
+      input.classList.add("shake");
+      return;
     }
+    landWordAtStar(val);
+    input.value = "";
+    if (input.blur) input.blur();
+    /* 关闭 S2 弹窗，露出路线与星辰 */
+    var s2 = $("#stars-s2");
+    if (s2) s2.hidden = true;
+    /* 底部回应浮现 */
+    var resp = $("#wish-response");
+    resp.textContent = wordResponseFor(val);
+    resp.hidden = false;
+    resp.classList.remove("show");
+    void resp.offsetWidth;
+    resp.classList.add("show");
+    var layer = $("#stars-after-layer");
+    if (layer) { layer.hidden = false; void layer.offsetWidth; layer.classList.add("show"); }
+    /* 给 2.2s 看词落下与回应，再收束 */
+    clearStarsTimeouts();
+    starsTimeouts.push(setTimeout(function () { enterS3(); }, 2200));
   }
 
   /* 词作为"新轨道"环绕点亮的星球：文字沿圆形轨道排布（textPath），
@@ -1698,12 +1738,6 @@
     tp.textContent = val;
     text.appendChild(tp);
     f.star.appendChild(text);
-  }
-
-  /* S2 → S3：收束（不填词直接收束） */
-  function skipS2() {
-    if (starsState !== "s2") return;
-    enterS3();
   }
 
   /* 收束：完整路径汇聚（湘江→遵义→分叉→用户星辰），只留一句 + 标题 + 两按钮 */
@@ -1896,6 +1930,8 @@
     if (name === "xianghe") {
       /* 克制的环境音：水声（需用户已开启声音，受总开关控制） */
       if (window.AudioAmbient && window.AudioAmbient.startWater) window.AudioAmbient.startWater();
+      /* 首次进入提示（每次打开页面只提示一次，点任一模块后消失） */
+      if (!xhHintDismissed) xhShowFirstHint();
     }
   if (name === "turning") { buildTurning(); if (window.AudioAmbient && window.AudioAmbient.startSceneBGM) window.AudioAmbient.startSceneBGM("turning"); /* 遵义·希望配乐（与上一幕交叉淡入淡出） */ }
   if (name === "sixty") { startSixty(); }
@@ -2025,10 +2061,9 @@
     $("#btn-sound").addEventListener("click", toggleSound);
     $("#btn-xianghe-decode").addEventListener("click", decodeXianghe);
     $("#btn-turning-next").addEventListener("click", onTurningNext);
-    /* 90年后：S0 提前进入 / S2 落下一个词(可选) / S2 直接收束 */
+    /* 90年后：S0 提前进入 / S2 落下一个词(必填) */
     $("#btn-stars-skip").addEventListener("click", enterS1);
     $("#btn-wish").addEventListener("click", landWord);
-    $("#btn-stars-s2-skip").addEventListener("click", skipS2);
   }
 
   if (document.readyState === "loading") {

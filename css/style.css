@@ -414,8 +414,20 @@ body[data-phase="map"] .hl { color: #9c2f2f; }
   transition: opacity 1.6s ease;
 }
 .scene.active .prologue-line { opacity: 1; transition-delay: 0.8s; }
+/* 开场点破玩法：你会做选择、没有对错（安抚第一次玩的人） */
+.prologue-sub {
+  margin-top: 14px;
+  font-family: var(--serif);
+  font-size: clamp(14px, 3.4vw, 18px);
+  color: var(--ink-soft);
+  letter-spacing: 0.12em;
+  line-height: 1.7;
+  opacity: 0;
+  transition: opacity 1.4s ease;
+}
+.scene.active .prologue-sub { opacity: 1; transition-delay: 1.1s; }
 #scene-prologue .btn { opacity: 0; transition: opacity 0.8s ease; }
-#scene-prologue.active .btn { opacity: 1; transition-delay: 1.2s; }
+#scene-prologue.active .btn { opacity: 1; transition-delay: 1.6s; }
 
 /* ============================================================
    页面2 险阻（卡片）
@@ -810,6 +822,21 @@ body[data-phase="map"] .observe-item.lit .o-label { color: #9c2f2f; }
   pointer-events: none;
 }
 .sixty-stage.show { opacity: 1; transform: none; pointer-events: auto; }
+/* 30秒首次进入提示：淡入 + 呼吸，选第一个行动后淡出（每次打开页面只提示一次）；深色幕用亮红保证可读 */
+.sixty-firsthint {
+  margin: 0 auto;
+  max-width: 560px;
+  text-align: center;
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  color: #d05050;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+.sixty-firsthint.show {
+  opacity: 1;
+  animation: xhFirsthintBreath 2.2s ease-in-out infinite;
+}
 .sixty-scene {
   font-family: var(--serif);
   font-size: clamp(17px, 4.5vw, 23px);
@@ -1057,6 +1084,15 @@ body[data-phase="map"] .observe-item.lit .o-label { color: #9c2f2f; }
 }
 .wish-input::placeholder { color: var(--ink-soft); }
 .wish-input:focus { border-color: var(--route-glow); }
+/* 必填：空输入点"落下"时抖动提醒 */
+.wish-input.shake { animation: wishShake 0.4s ease; border-color: var(--route-red); }
+@keyframes wishShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
 .wish-btn { margin-top: 0; }
 /* 点亮后的极短回应（关键词匹配，无 AI / 无后端） */
 .wish-response {
@@ -1879,6 +1915,24 @@ body[data-phase="space"] .stars-route { opacity: 1; }
 }
 
 /* 4 个模块 */
+/* 湘江首次进入提示：淡入 + 呼吸，点任一模块后淡出（每次打开页面只提示一次） */
+.xh-firsthint {
+  margin: 16px 0 0;
+  text-align: center;
+  font-size: 14px;
+  letter-spacing: 0.12em;
+  color: var(--route-red);
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+.xh-firsthint.show {
+  opacity: 1;
+  animation: xhFirsthintBreath 2.2s ease-in-out infinite;
+}
+@keyframes xhFirsthintBreath {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(3px); }
+}
 .xh-modules {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
