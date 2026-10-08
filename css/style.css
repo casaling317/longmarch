@@ -1099,18 +1099,60 @@ body[data-phase="map"] .observe-item.lit .o-label { color: #9c2f2f; }
   80% { transform: translateX(4px); }
 }
 .wish-btn { margin-top: 0; }
-/* 点亮后的极短回应（关键词匹配，无 AI / 无后端） */
+/* 点亮后的回应（关键词匹配，无 AI / 无后端）——S2 词的回应 / S3 保留的"这一颗星，属于你"
+   全片情感落点：放大 + 白色星光 + 入场上浮放大 + 光晕呼吸 + 背后径向光 */
 .wish-response {
-  margin-top: 16px;
+  position: relative;
+  margin-top: 0;
   font-family: var(--serif);
-  font-size: clamp(14px, 3.8vw, 17px);
-  letter-spacing: 0.12em;
-  color: var(--route-glow);
+  font-size: clamp(24px, 5.5vw, 44px);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: #ffffff;
   opacity: 0;
-  transform: translateY(6px);
-  transition: opacity 1s ease, transform 1s ease;
+  /* 纯渐入：只淡入 + 轻微上浮，不放缩（放缩会显得"弹出"而非"淡入"）；2s 更从容 */
+  transform: translateY(12px);
+  transition: opacity 2s ease, transform 2s ease;
+  text-shadow:
+    0 0 16px rgba(170,220,255,.9),
+    0 0 42px rgba(115,190,255,.6),
+    0 0 80px rgba(85,160,255,.4);
 }
-.wish-response.show { opacity: 1; transform: none; }
+.wish-response.show {
+  opacity: 1;
+  transform: translateY(0);
+  animation: wishGlow 3.2s ease-in-out infinite;
+}
+/* 背后径向光晕：让这句话像一颗星在发光（在文字之后、随 .show 淡入） */
+.wish-response::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 160%;
+  height: 360%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(ellipse at center, rgba(130,195,255,.30) 0%, rgba(130,195,255,.10) 42%, transparent 72%);
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1.8s ease;
+}
+.wish-response.show::before { opacity: 1; }
+@keyframes wishGlow {
+  0%, 100% {
+    text-shadow:
+      0 0 16px rgba(170,220,255,.9),
+      0 0 42px rgba(115,190,255,.6),
+      0 0 80px rgba(85,160,255,.4);
+  }
+  50% {
+    text-shadow:
+      0 0 24px rgba(200,235,255,1),
+      0 0 60px rgba(140,200,255,.8),
+      0 0 110px rgba(95,170,255,.55);
+  }
+}
 .wish-hint {
   margin-top: 14px;
   font-size: 12px;
